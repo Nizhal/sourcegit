@@ -59,7 +59,13 @@ namespace SourceGit.Native
         private static extern int SHOpenFolderAndSelectItems(IntPtr pidlFolder, int cild, IntPtr apidl, int dwFlags);
 
         [DllImport("kernel32.dll")]
-        public static extern bool SetConsoleCtrlHandler(IntPtr handlerRoutine, bool add);
+        private static extern bool AttachConsole(int dwProcessId);
+
+        [DllImport("kernel32.dll")]
+        private static extern bool FreeConsole();
+
+        [DllImport("kernel32.dll")]
+        private static extern bool SetConsoleCtrlHandler(IntPtr handlerRoutine, bool add);
 
         [DllImport("kernel32.dll")]
         private static extern bool GenerateConsoleCtrlEvent(int dwCtrlEvent, int dwProcessGroupId);
@@ -225,17 +231,21 @@ namespace SourceGit.Native
 
         public void TerminateSafely(Process process)
         {
-            if (SetConsoleCtrlHandler(IntPtr.Zero, true))
+            FreeConsole();
+
+            if (AttachConsole(process.Id))
             {
+                SetConsoleCtrlHandler(IntPtr.Zero, true);
                 try
                 {
-                    if (GenerateConsoleCtrlEvent((int)CTRL_EVENT.CTRL_C, process.Id))
-                        process.WaitForExit();
+                    if (GenerateConsoleCtrlEvent((int)CTRL_EVENT.CTRL_C, 0))
+                        process.WaitForExit(2000);
                 }
-                finally
+                catch
                 {
-                    SetConsoleCtrlHandler(IntPtr.Zero, false);
+                    // DO NOTHING
                 }
+                SetConsoleCtrlHandler(IntPtr.Zero, false);
             }
         }
 
