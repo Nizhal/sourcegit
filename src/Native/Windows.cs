@@ -231,22 +231,26 @@ namespace SourceGit.Native
 
         public void TerminateSafely(Process process)
         {
-            FreeConsole();
-
-            if (AttachConsole(process.Id))
+            // Only one process can be terminated at a time
+            lock (_lockTerminateProcessRequest)
             {
-                SetConsoleCtrlHandler(IntPtr.Zero, true);
-                try
+                FreeConsole();
+
+                if (AttachConsole(process.Id))
                 {
-                    if (GenerateConsoleCtrlEvent((int)CTRL_EVENT.CTRL_C, 0))
-                        process.WaitForExit(2000);
+                    SetConsoleCtrlHandler(IntPtr.Zero, true);
+                    try
+                    {
+                        if (GenerateConsoleCtrlEvent((int)CTRL_EVENT.CTRL_C, 0))
+                            process.WaitForExit(2000);
+                    }
+                    catch
+                    {
+                        // DO NOTHING
+                    }
+                    SetConsoleCtrlHandler(IntPtr.Zero, false);
                 }
-                catch
-                {
-                    // DO NOTHING
-                }
-                SetConsoleCtrlHandler(IntPtr.Zero, false);
-            }
+            }            
         }
 
         private void FixWindowFrameOnWin10(Window w)
@@ -430,5 +434,7 @@ namespace SourceGit.Native
 
             return null;
         }
+
+        private object _lockTerminateProcessRequest = new object();
     }
 }
