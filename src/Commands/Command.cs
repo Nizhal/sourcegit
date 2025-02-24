@@ -75,7 +75,7 @@ namespace SourceGit.Commands
             {
                 CancellationToken.Register(() =>
                 {
-                    if (_proc != null && !_isDone)
+                    if (_proc is { HasExited: false })
                         Native.OS.TerminateSafely(_proc);
                 });
             }
@@ -92,7 +92,6 @@ namespace SourceGit.Commands
                 return false;
             }
 
-            _isDone = false;
             _proc = proc;
 
             int exitCode;
@@ -102,7 +101,6 @@ namespace SourceGit.Commands
                 proc.BeginErrorReadLine();
                 proc.WaitForExit();
 
-                _isDone = true;
                 exitCode = proc.ExitCode;
                 proc.Close();
             }
@@ -111,7 +109,10 @@ namespace SourceGit.Commands
                 _proc = null;
             }
 
-            if (!CancellationToken.IsCancellationRequested && exitCode != 0)
+            if (CancellationToken.IsCancellationRequested)
+                return false;
+
+            if (exitCode != 0)
             {
                 if (RaiseError)
                 {
@@ -223,6 +224,5 @@ namespace SourceGit.Commands
         private static partial Regex REG_PROGRESS();
 
         private Process _proc = null;
-        private bool _isDone = false;
     }
 }

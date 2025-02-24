@@ -62,6 +62,8 @@ namespace SourceGit.ViewModels
         public Clone(string pageId)
         {
             _pageId = pageId;
+
+            CanCancelInProgress = true;
             View = new Views.Clone() { DataContext = this };
 
             Task.Run(async () =>
@@ -102,6 +104,7 @@ namespace SourceGit.ViewModels
             return Task.Run(() =>
             {
                 var cmd = new Commands.Clone(_pageId, _parentFolder, _remote, _local, _useSSH ? _sshKey : "", _extraArgs, SetProgressDescription);
+                cmd.CancellationToken = CancelInProgressTokenSource.Token;
                 if (!cmd.Exec())
                     return false;
 
