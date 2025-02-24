@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Avalonia.Collections;
@@ -205,6 +206,8 @@ namespace SourceGit.ViewModels
         {
             _repo = null;
             _commit = null;
+            _cancelSource?.Cancel();
+            _cancelSource = null;
 
             if (_changes != null)
                 _changes.Clear();
@@ -217,7 +220,6 @@ namespace SourceGit.ViewModels
             _searchChangeFilter = null;
             _diffContext = null;
             _viewRevisionFileContent = null;
-            _cancelToken = null;
 
             WebLinks.Clear();
             _revisionFiles.Clear();
@@ -644,19 +646,20 @@ namespace SourceGit.ViewModels
                 Dispatcher.UIThread.Invoke(() => SignInfo = signInfo);
             });
 
-            if (_cancelToken != null)
-                _cancelToken.Requested = true;
+            if (_cancelSource is { IsCancellationRequested: false })
+                _cancelSource.Cancel();
 
-            _cancelToken = new Commands.Command.CancelToken();
+            _cancelSource = new CancellationTokenSource();
+            var cancelToken = _cancelSource.Token;
 
             if (Preferences.Instance.ShowChildren)
             {
                 Task.Run(() =>
                 {
                     var max = Preferences.Instance.MaxHistoryCommits;
-                    var cmdChildren = new Commands.QueryCommitChildren(_repo.FullPath, _commit.SHA, max) { Cancel = _cancelToken };
+                    var cmdChildren = new Commands.QueryCommitChildren(_repo.FullPath, _commit.SHA, max) { CancellationToken = cancelToken };
                     var children = cmdChildren.Result();
-                    if (!cmdChildren.Cancel.Requested)
+                    if (!cancelToken.IsCancellationRequested)
                         Dispatcher.UIThread.Post(() => Children.AddRange(children));
                 });
             }
@@ -664,7 +667,7 @@ namespace SourceGit.ViewModels
             Task.Run(() =>
             {
                 var parent = _commit.Parents.Count == 0 ? "4b825dc642cb6eb9a060e54bf8d69288fbee4904" : _commit.Parents[0];
-                var cmdChanges = new Commands.CompareRevisions(_repo.FullPath, parent, _commit.SHA) { Cancel = _cancelToken };
+                var cmdChanges = new Commands.CompareRevisions(_repo.FullPath, parent, _commit.SHA) { CancellationToken = cancelToken };
                 var changes = cmdChanges.Result();
                 var visible = changes;
                 if (!string.IsNullOrWhiteSpace(_searchChangeFilter))
@@ -677,7 +680,7 @@ namespace SourceGit.ViewModels
                     }
                 }
 
-                if (!cmdChanges.Cancel.Requested)
+                if (!cancelToken.IsCancellationRequested)
                 {
                     Dispatcher.UIThread.Post(() =>
                     {
@@ -823,6 +826,7 @@ namespace SourceGit.ViewModels
         private Repository _repo = null;
         private int _activePageIndex = 0;
         private Models.Commit _commit = null;
+        private CancellationTokenSource _cancelSource = null;
         private string _fullMessage = string.Empty;
         private Models.CommitSignInfo _signInfo = null;
         private List<Models.Change> _changes = null;
@@ -831,7 +835,6 @@ namespace SourceGit.ViewModels
         private string _searchChangeFilter = string.Empty;
         private DiffContext _diffContext = null;
         private object _viewRevisionFileContent = null;
-        private Commands.Command.CancelToken _cancelToken = null;
         private List<string> _revisionFiles = [];
         private string _revisionFileSearchFilter = string.Empty;
         private bool _isRevisionFileSearchSuggestionOpen = false;

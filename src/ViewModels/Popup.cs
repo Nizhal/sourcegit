@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Avalonia.Threading;
@@ -14,7 +15,7 @@ namespace SourceGit.ViewModels
         {
             get;
             set;
-        }
+        } = null;
 
         public bool InProgress
         {
@@ -28,6 +29,18 @@ namespace SourceGit.ViewModels
             set => SetProperty(ref _progressDescription, value);
         }
 
+        public bool CanCancelInProgress
+        {
+            get;
+            set;
+        } = false;
+
+        public CancellationTokenSource CancelInProgressTokenSource
+        {
+            get;
+            set;
+        } = new CancellationTokenSource();
+
         [UnconditionalSuppressMessage("AssemblyLoadTrimming", "IL2026:RequiresUnreferencedCode")]
         public bool Check()
         {
@@ -35,6 +48,12 @@ namespace SourceGit.ViewModels
                 return false;
             ValidateAllProperties();
             return !HasErrors;
+        }
+
+        public void CancelInProgress()
+        {
+            if (CanCancelInProgress)
+                CancelInProgressTokenSource.Cancel();
         }
 
         public virtual bool CanStartDirectly()

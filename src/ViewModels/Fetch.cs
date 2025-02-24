@@ -56,6 +56,7 @@ namespace SourceGit.ViewModels
                 SelectedRemote = _repo.Remotes[0];
             }
 
+            CanCancelInProgress = true;
             View = new Views.Fetch() { DataContext = this };
         }
 
@@ -72,13 +73,17 @@ namespace SourceGit.ViewModels
                     foreach (var remote in _repo.Remotes)
                     {
                         SetProgressDescription($"Fetching remote: {remote.Name}");
-                        new Commands.Fetch(_repo.FullPath, remote.Name, notags, force, SetProgressDescription).Exec();
+                        var cmd = new Commands.Fetch(_repo.FullPath, remote.Name, notags, force, SetProgressDescription);
+                        cmd.CancellationToken = CancelInProgressTokenSource.Token;
+                        cmd.Exec();
                     }
                 }
                 else
                 {
                     SetProgressDescription($"Fetching remote: {SelectedRemote.Name}");
-                    new Commands.Fetch(_repo.FullPath, SelectedRemote.Name, notags, force, SetProgressDescription).Exec();
+                    var cmd = new Commands.Fetch(_repo.FullPath, SelectedRemote.Name, notags, force, SetProgressDescription);
+                    cmd.CancellationToken = CancelInProgressTokenSource.Token;
+                    cmd.Exec();
                 }
 
                 CallUIThread(() =>
