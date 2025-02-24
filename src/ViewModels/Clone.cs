@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Avalonia.Threading;
@@ -101,10 +102,11 @@ namespace SourceGit.ViewModels
         {
             ProgressDescription = "Clone ...";
 
+            _cancellation = new CancellationTokenSource();
             return Task.Run(() =>
             {
                 var cmd = new Commands.Clone(_pageId, _parentFolder, _remote, _local, _useSSH ? _sshKey : "", _extraArgs, SetProgressDescription);
-                cmd.CancellationToken = CancelInProgressTokenSource.Token;
+                cmd.CancellationToken = _cancellation.Token;
                 if (!cmd.Exec())
                     return false;
 
@@ -169,6 +171,11 @@ namespace SourceGit.ViewModels
             });
         }
 
+        public override void DoCancelInProgress()
+        {
+            _cancellation?.Cancel();
+        }
+
         private string _pageId = string.Empty;
         private string _remote = string.Empty;
         private bool _useSSH = false;
@@ -176,5 +183,6 @@ namespace SourceGit.ViewModels
         private string _parentFolder = Preferences.Instance.GitDefaultCloneDir;
         private string _local = string.Empty;
         private string _extraArgs = string.Empty;
+        private CancellationTokenSource _cancellation = null;
     }
 }

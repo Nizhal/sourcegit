@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace SourceGit.ViewModels
@@ -63,6 +64,7 @@ namespace SourceGit.ViewModels
         public override Task<bool> Sure()
         {
             _repo.SetWatcherEnabled(false);
+            _cancellation = new CancellationTokenSource();
 
             var notags = _repo.Settings.FetchWithoutTags;
             var force = _repo.Settings.EnableForceOnFetch;
@@ -74,7 +76,7 @@ namespace SourceGit.ViewModels
                     {
                         SetProgressDescription($"Fetching remote: {remote.Name}");
                         var cmd = new Commands.Fetch(_repo.FullPath, remote.Name, notags, force, SetProgressDescription);
-                        cmd.CancellationToken = CancelInProgressTokenSource.Token;
+                        cmd.CancellationToken = _cancellation.Token;
                         cmd.Exec();
                     }
                 }
@@ -82,7 +84,7 @@ namespace SourceGit.ViewModels
                 {
                     SetProgressDescription($"Fetching remote: {SelectedRemote.Name}");
                     var cmd = new Commands.Fetch(_repo.FullPath, SelectedRemote.Name, notags, force, SetProgressDescription);
-                    cmd.CancellationToken = CancelInProgressTokenSource.Token;
+                    cmd.CancellationToken = _cancellation.Token;
                     cmd.Exec();
                 }
 
@@ -96,7 +98,13 @@ namespace SourceGit.ViewModels
             });
         }
 
+        public override void DoCancelInProgress()
+        {
+            _cancellation?.Cancel();
+        }
+
         private readonly Repository _repo = null;
         private bool _fetchAllRemotes;
+        private CancellationTokenSource _cancellation = null;
     }
 }
