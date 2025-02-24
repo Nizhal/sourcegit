@@ -100,8 +100,7 @@ namespace SourceGit.Native
 
         public void TerminateSafely(Process process)
         {
-            if (kill(process.Id, (int)SIGNAL.TERM) == 0)
-                process.WaitForExit();
+            kill(process.Id, (int)SIGNAL.TERM);
         }
     }
 }
