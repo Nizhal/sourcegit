@@ -234,8 +234,6 @@ namespace SourceGit.Native
             // Only one process can be terminated at a time
             lock (_lockTerminateProcessRequest)
             {
-                FreeConsole();
-
                 if (AttachConsole(process.Id))
                 {
                     SetConsoleCtrlHandler(IntPtr.Zero, true);
@@ -248,6 +246,7 @@ namespace SourceGit.Native
                     {
                         // DO NOTHING
                     }
+                    FreeConsole();
                     SetConsoleCtrlHandler(IntPtr.Zero, false);
                 }
             }            
