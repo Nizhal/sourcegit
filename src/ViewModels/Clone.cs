@@ -108,7 +108,7 @@ namespace SourceGit.ViewModels
                 var cmd = new Commands.Clone(_pageId, _parentFolder, _remote, _local, _useSSH ? _sshKey : "", _extraArgs, SetProgressDescription);
                 cmd.CancellationToken = _cancellation.Token;
                 if (!cmd.Exec())
-                    return false;
+                    return _cancellation.IsCancellationRequested;
 
                 var path = _parentFolder;
                 if (!string.IsNullOrEmpty(_local))
